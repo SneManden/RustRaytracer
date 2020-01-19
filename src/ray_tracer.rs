@@ -2,6 +2,7 @@ pub mod vector_library;
 pub mod utility;
 pub mod sphere3d;
 pub mod ray;
+pub mod ppm;
 
 use vector_library::{Vec3D, Point3D};
 use utility::deg_2_rad;
@@ -29,20 +30,22 @@ pub struct Scene {
 }
 
 pub fn render(settings: &Settings, scene: &Scene) {
-    println!(
-        "render(w: {}, h: {}, aspect_ratio: {}, fov: {})...",
-        settings.width,
-        settings.height,
-        settings.aspect_ratio(),
-        settings.fov);
+    // println!(
+    //     "render(w: {}, h: {}, aspect_ratio: {}, fov: {})...",
+    //     settings.width,
+    //     settings.height,
+    //     settings.aspect_ratio(),
+    //     settings.fov);
 
-    for fx in 0..settings.width {
-        print!("==");
-    }
-    println!("");
+    // for fx in 0..settings.width {
+    //     print!("==");
+    // }
+    // println!("");
+
+    ppm::write_header(settings.width, settings.height);
 
     for y in 0..settings.height {
-        print!("{}: ", y + 1);
+        // print!("{}: ", y + 1);
         for x in 0..settings.width {
             let p = image_coord_to_camera_space(x, y, &settings);
 
@@ -53,18 +56,20 @@ pub fn render(settings: &Settings, scene: &Scene) {
 
             let intersection = nearest_intersection(&ray, &scene);
 
-            match intersection {
-                Some(_) => print!("{}{}", ":", ":"),
-                None => print!("{}{}", " ", " ")
-            }
+            let color = match intersection {
+                Some(_) => ppm::Color::new(255, 255, 255),
+                None => ppm::Color::new(0, 0, 0)
+            };
+
+            ppm::write_color(&color);
         }
-        println!("");
+        // println!("");
     }
 
-    for fx in 0..settings.width {
-        print!("==");
-    }
-    println!("");
+    // for fx in 0..settings.width {
+    //     print!("==");
+    // }
+    // println!("");
 }
 
 fn nearest_intersection<'a>(ray: &Ray, scene: &'a Scene) -> Option<(&'a Sphere3D, f32)> {
