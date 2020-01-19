@@ -1,8 +1,7 @@
 pub mod ray_tracer;
 
-use ray_tracer::{render, Settings, Scene, Sphere3D};
-
-use std::{thread, time};
+use ray_tracer::{render, Settings, Scene};
+use ray_tracer::sphere3d::Sphere3D;
 
 pub fn run() {
     let settings = Settings {
