@@ -56,29 +56,40 @@ pub fn render(settings: &Settings, scene: &Scene) {
         settings.aspect_ratio(),
         settings.fov);
 
-    for x in 0..settings.width {
-        for y in 0..settings.height {
+    for fx in 0..settings.width {
+        print!("==");
+    }
+    println!("");
+
+    for y in 0..settings.height {
+        print!("{}: ", y + 1);
+        for x in 0..settings.width {
             
             let p = image_coord_to_camera_space(x, y, &settings);
 
-            println!("Pixel ({}, {}) -> ({}, {}, {})", x, y, p.x(), p.y(), p.z());
+            // println!("Pixel ({}, {}) -> ({}, {}, {})", x, y, p.x(), p.y(), p.z());
 
             let origin = Point3D::new(0.0, 0.0, 0.0);
 
             let ray = Ray::new(origin, &p);
 
             let rayDir = ray.direction();
-            println!(" --> ray with direction ({}, {}, {})", rayDir.x(), rayDir.y(), rayDir.z());
+            // println!(" --> ray with direction ({}, {}, {})", rayDir.x(), rayDir.y(), rayDir.z());
 
             let intersection = nearest_intersection(&ray, &scene);
 
             match intersection {
-                Some(_) => println!(" --> color = {}", "white"),
-                None => println!(" --> color = {}", "black")
+                Some(_) => print!("{}{}", ":", ":"),
+                None => print!("{}{}", " ", " ")
             }
         }
+        println!("");
     }
-    println!("=> Done.");
+
+    for fx in 0..settings.width {
+        print!("==");
+    }
+    println!("");
 }
 
 fn nearest_intersection<'a>(ray: &Ray, scene: &'a Scene) -> Option<(&'a Sphere3D, f32)> {
@@ -151,6 +162,11 @@ impl Sphere3D {
         }
     }
 
+    pub fn translate(&self, tx: f32, ty: f32, tz: f32) -> Sphere3D {
+        let c = &self.center;
+        Sphere3D::new(c.x() + tx, c.y() + ty, c.z() + tz, self.radius)
+    }
+
     // www.cs.unc.edu/~rademach/xroads-RT/RTarticle.html
     fn intersect(&self, ray: &Ray) -> Option<Point3D> {
         let E = ray.origin();
@@ -158,8 +174,9 @@ impl Sphere3D {
         let O = &self.center;
         let EO = Vec3D::between(&E, &O);
         let v = EO.dot(&V);
+        let r = &self.radius;
 
-        let disc = EO.dot(&EO) - v * v;
+        let disc = r * r - (EO.dot(&EO) - v * v);
 
         if disc < 0.0 {
             None
