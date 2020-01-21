@@ -18,4 +18,8 @@ impl Ray {
     pub fn direction(&self) -> &Vec3D {
         &self.direction
     }
+
+    pub fn point_at(&self, distance: f32) -> Point3D {
+        self.origin().add(&Point3D::from(&self.direction.scale(distance)))
+    }
 }

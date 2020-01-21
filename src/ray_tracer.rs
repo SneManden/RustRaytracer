@@ -1,6 +1,7 @@
 pub mod vector_library;
 pub mod utility;
 pub mod sphere3d;
+pub mod light;
 pub mod ray;
 pub mod ppm;
 
@@ -8,11 +9,16 @@ use vector_library::{Vec3D, Point3D};
 use utility::deg_2_rad;
 use sphere3d::Sphere3D;
 use ray::Ray;
+use light::Light;
+
+use std::f32::consts::PI;
 
 pub struct Settings {
     pub width: u16,
     pub height: u16,
-    pub fov: f32
+    pub fov: f32,
+
+    pub ambient_light: f32// ambient coefficient
 }
 
 impl Settings {
@@ -23,53 +29,58 @@ impl Settings {
     fn fov_rad(&self) -> f32 {
         deg_2_rad(self.fov)
     }
+
+    fn ambient_coefficient(&self) -> f32 {
+        self.ambient_light
+    }
+
+    fn diffuse_coefficient(&self) -> f32 {
+        1.0 - self.ambient_coefficient()
+    }
 }
 
 pub struct Scene {
-    pub object: Sphere3D
+    pub object: Sphere3D,
+    pub light: Light
 }
 
 pub fn render(settings: &Settings, scene: &Scene) {
-    // println!(
-    //     "render(w: {}, h: {}, aspect_ratio: {}, fov: {})...",
-    //     settings.width,
-    //     settings.height,
-    //     settings.aspect_ratio(),
-    //     settings.fov);
-
-    // for fx in 0..settings.width {
-    //     print!("==");
-    // }
-    // println!("");
-
     ppm::write_header(settings.width, settings.height);
 
     for y in 0..settings.height {
-        // print!("{}: ", y + 1);
         for x in 0..settings.width {
             let p = image_coord_to_camera_space(x, y, &settings);
 
             let origin = Point3D::new(0.0, 0.0, 0.0);
 
             let ray = Ray::new(origin, &p);
-            let rayDir = ray.direction();
 
             let intersection = nearest_intersection(&ray, &scene);
 
-            let color = match intersection {
-                Some(_) => ppm::Color::new(255, 255, 255),
-                None => ppm::Color::new(0, 0, 0)
+            let color = if let Some((obj, dist)) = intersection {
+                let intersection_point = ray.point_at(dist);  //ray.origin().plus(&ray_dir.scale(dist));
+                let surface_normal = obj.get_normal(&intersection_point);
+
+                let light = &scene.light;
+                let ray_to_light = Vec3D::between(&intersection_point, &light.center).unit();
+
+                // L = 1/pi cos(angle) I / r^2
+                let cos_angle = surface_normal.dot(&ray_to_light).max(0.0);
+
+                let reflected_light = (1.0 / PI) * cos_angle * (light.intensity / ray_to_light.len().powi(2));
+
+                let val = reflected_light.min(255.0);
+
+                let pixel_color = ((32.0 * settings.ambient_coefficient()) + (settings.diffuse_coefficient() * val)) as u8;
+
+                ppm::Color::new(pixel_color, pixel_color, pixel_color)
+            } else {
+                ppm::Color::new(0, 0, 0)
             };
 
             ppm::write_color(&color);
         }
-        // println!("");
     }
-
-    // for fx in 0..settings.width {
-    //     print!("==");
-    // }
-    // println!("");
 }
 
 fn nearest_intersection<'a>(ray: &Ray, scene: &'a Scene) -> Option<(&'a Sphere3D, f32)> {

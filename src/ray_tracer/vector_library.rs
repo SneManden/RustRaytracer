@@ -68,6 +68,10 @@ impl Point3D {
         Point3D::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
 
+    pub fn subtract(&self, other: &Point3D) -> Point3D {
+        Point3D::new(self.x - other.x, self.y - other.y, self.z - other.z)
+    }
+
     pub fn from(v: &Vec3D) -> Point3D {
         Point3D::new(v.x, v.y, v.z)
     }
