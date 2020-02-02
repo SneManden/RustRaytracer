@@ -1,9 +1,11 @@
+#[derive(Debug)]
 pub struct Vec3D {
     x: f32,
     y: f32,
     z: f32 
 }
 
+#[derive(Debug)]
 pub struct Point3D {
     x: f32,
     y: f32,
@@ -64,6 +66,10 @@ impl Point3D {
         Point3D { x, y, z }
     }
 
+    pub fn zero() -> Point3D {
+        Point3D { x: 0.0, y: 0.0, z: 0.0 }
+    }
+
     pub fn add(&self, other: &Point3D) -> Point3D {
         Point3D::new(self.x + other.x, self.y + other.y, self.z + other.z)
     }
@@ -79,6 +85,12 @@ impl Point3D {
     pub fn on_half_line(&self, direction: &Vec3D, length: f32) -> Point3D {
         let p = Point3D::from(&direction.scale(length));
         self.add(&p)
+    }
+}
+
+impl PartialEq for Point3D {
+    fn eq(&self, other: &Self) -> bool {
+        self.x == other.x && self.y == other.y && self.z == other.z
     }
 }
 

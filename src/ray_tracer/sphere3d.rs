@@ -1,6 +1,7 @@
 use super::vector_library::{Point3D, Vec3D};
 use super::ray::Ray;
 
+#[derive(Debug)]
 pub struct Sphere3D {
     pub center: Point3D,
     pub radius: f32
@@ -20,14 +21,18 @@ impl Sphere3D {
     }
 
     // www.cs.unc.edu/~rademach/xroads-RT/RTarticle.html
+    //
     pub fn intersect(&self, ray: &Ray) -> Option<Point3D> {
         let point_e = ray.origin();
         let vec_v = ray.direction();
         let point_o = &self.center;
         let vec_eo = Vec3D::between(&point_e, &point_o);
         let val = vec_eo.dot(&vec_v);
-        let r = &self.radius;
+        if val < 0.0 {
+            return None;
+        }
 
+        let r = &self.radius;
         let disc = r * r - (vec_eo.dot(&vec_eo) - val * val);
 
         if disc < 0.0 {
@@ -41,5 +46,57 @@ impl Sphere3D {
 
     pub fn get_normal(&self, point: &Point3D) -> Vec3D {
         Vec3D::between(&self.center, &point).scale(1.0 / self.radius)
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn intersect_with_ray_straight_on() {
+        // Arrange
+        let sphere = Sphere3D::new(0.0, 0.0, -3.0, 1.0);
+        let origin = Point3D::zero();
+        let target = Point3D::new(0.0, 0.0, -1.0);
+        let ray = Ray::new(origin, &target);
+        let expected = Point3D::new(0.0, 0.0, -2.0);
+
+        // Act
+        let intersection = sphere.intersect(&ray).expect("should yield an intersection");
+
+        // Assert
+        assert_eq!(intersection, expected);
+    }
+
+    #[test]
+    fn intersect_with_ray_opposite_direction() {
+        // Arrange
+        let sphere = Sphere3D::new(0.0, 0.0, -3.0, 1.0);
+        let origin = Point3D::zero();
+        let target = Point3D::new(0.0, 0.0, 1.0);
+        let ray = Ray::new(origin, &target);
+
+        // Act
+        let intersection = sphere.intersect(&ray);
+
+        // Assert
+        assert!(intersection.is_none(), "intersection = {:?}", intersection);
+    }
+
+    #[test]
+    fn intersect_with_ray_miss() {
+        // Arrange
+        let sphere = Sphere3D::new(0.0, 0.0, -3.0, 1.0);
+        let origin = Point3D::zero();
+        let target = Point3D::new(1.0, 0.0, -1.0);
+        let ray = Ray::new(origin, &target);
+
+        // Act
+        let intersection = sphere.intersect(&ray);
+
+        // Assert
+        assert!(intersection.is_none(), "intersection = {:?}", intersection);
     }
 }

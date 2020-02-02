@@ -40,7 +40,7 @@ impl Settings {
 }
 
 pub struct Scene {
-    pub object: Sphere3D,
+    pub objects: Vec<Sphere3D>,
     pub light: Light
 }
 
@@ -78,24 +78,34 @@ pub fn render(settings: &Settings, scene: &Scene) {
                 ppm::Color::new(0, 0, 0)
             };
 
-            ppm::write_color(&color);
+            ppm::write_color(&color).expect("something wrong when writing color");
         }
     }
 }
 
 fn nearest_intersection<'a>(ray: &Ray, scene: &'a Scene) -> Option<(&'a Sphere3D, f32)> {
-    // for each object in scene
-    let object = &scene.object;
+    let mut nearest: Option<(&Sphere3D, f32)> = None;
 
-    let intersection = object.intersect(&ray);
-
-    match intersection {
-        Some(p) => {
-            let dist = Vec3D::between(&ray.origin(), &p).len();
-            Some((&object, dist))
-        },
-        None => None
+    for object in &scene.objects {
+        let intersection = object.intersect(&ray);
+        nearest = match intersection {
+            Some(p) => {
+                let dist = Vec3D::between(&ray.origin(), &p).len();
+                match nearest {
+                    Some((nobj, ndist)) => {
+                        if dist < ndist {
+                            Some((object, dist))
+                        } else {
+                            Some((nobj, ndist))
+                        }
+                    }
+                    None => Some((object, dist))
+                }
+            },
+            None => nearest
+        }
     }
+    nearest
 }
 
 fn image_coord_to_camera_space(x: u16, y: u16, settings: &Settings) -> Point3D {
@@ -120,3 +130,94 @@ fn image_coord_to_camera_space(x: u16, y: u16, settings: &Settings) -> Point3D {
     Point3D::new(p_camera_x, p_camera_y, -1.0)
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ptr;
+
+    #[test]
+    fn nearest_intersection1() {
+        // Arrange
+        let sphere1 = Sphere3D::new(0.0, 0.0, -3.0, 1.0);
+        let sphere2 = Sphere3D::new(0.0, 0.0, -5.0, 1.0);
+        let scene = Scene {
+            objects: vec!(sphere1, sphere2),
+            light: Light::new(2.0, 1.0, 0.0, 200.0)
+        };
+        let o = Point3D::zero();
+        let t = Point3D::new(0.0, 0.0, -1.0);
+        let ray = Ray::new(o, &t);
+
+        // Act
+        let (sphere, dist) = nearest_intersection(&ray, &scene).expect("should yield intersection");
+
+        // Assert
+        assert!(ptr::eq(sphere, &scene.objects[0]));
+        assert_eq!(dist, 2.0);
+    }
+
+    #[test]
+    fn nearest_intersection2() {
+        // Arrange
+        let sphere1 = Sphere3D::new(0.0, 0.0, -3.0, 1.0);
+        let sphere2 = Sphere3D::new(0.0, 0.0, -5.0, 1.0);
+        let scene = Scene {
+            objects: vec!(sphere2, sphere1),
+            light: Light::new(2.0, 1.0, 0.0, 200.0)
+        };
+        let o = Point3D::zero();
+        let t = Point3D::new(0.0, 0.0, -1.0);
+        let ray = Ray::new(o, &t);
+
+        // Act
+        let (sphere, dist) = nearest_intersection(&ray, &scene).expect("should yield intersection");
+
+        // Assert
+        assert!(ptr::eq(sphere, &scene.objects[1]));
+        assert_eq!(dist, 2.0);
+    }
+
+    #[test]
+    fn nearest_intersection_side_by_side_nearest_is_first_in_vec() {
+        // Arrange
+        let sphere1 = Sphere3D::new( 0.0, 0.0, -3.0, 1.0);
+        let sphere2 = Sphere3D::new( 2.0, 0.0, -3.0, 1.0);
+        let scene = Scene {
+            objects: vec!(sphere1, sphere2),
+            light: Light::new(2.0, 1.0, 0.0, 200.0)
+        };
+        let o = Point3D::zero();
+        let t = Point3D::new(0.0, 0.0, -1.0);
+        let ray = Ray::new(o, &t); // Shooting right at sphere1 (left)
+
+        // Act
+        let (sphere, dist) = nearest_intersection(&ray, &scene).expect("should yield intersection");
+
+        // Assert
+        assert!(ptr::eq(sphere, &scene.objects[0]));
+        assert_eq!(dist, 2.0);
+    }
+
+
+    #[test]
+    fn nearest_intersection_side_by_side_nearest_is_last_in_vec() {
+        // Arrange
+        let sphere1 = Sphere3D::new( 0.0, 0.0, -3.0, 1.0);
+        let sphere2 = Sphere3D::new( 2.0, 0.0, -3.0, 1.0);
+        let scene = Scene {
+            objects: vec!(sphere2, sphere1),
+            light: Light::new(2.0, 1.0, 0.0, 200.0)
+        };
+        let o = Point3D::zero();
+        let t = Point3D::new(0.0, 0.0, -1.0);
+        let ray = Ray::new(o, &t); // Shooting right at sphere1 (left)
+
+        // Act
+        let (sphere, dist) = nearest_intersection(&ray, &scene).expect("should yield intersection");
+
+        // Assert
+        assert!(ptr::eq(sphere, &scene.objects[1]));
+        assert_eq!(dist, 2.0);
+    }
+}

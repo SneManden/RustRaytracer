@@ -1,5 +1,6 @@
 use super::vector_library::{Point3D, Vec3D};
 
+#[derive(Debug)]
 pub struct Ray {
     origin: Point3D,
     direction: Vec3D // Normalized
