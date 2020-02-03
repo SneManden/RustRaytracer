@@ -1,17 +1,20 @@
 use super::vector_library::{Point3D, Vec3D};
 use super::ray::Ray;
+use super::ppm::Color;
 
 #[derive(Debug)]
 pub struct Sphere3D {
     pub center: Point3D,
-    pub radius: f32
+    pub radius: f32,
+    pub color: Color
 }
 
 impl Sphere3D {
     pub fn new(cx: f32, cy: f32, cz: f32, radius: f32) -> Sphere3D {
         Sphere3D {
             center: Point3D::new(cx, cy, cz),
-            radius
+            radius,
+            color: Color::new(128, 128, 128)
         }
     }
 

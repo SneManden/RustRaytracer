@@ -69,11 +69,12 @@ pub fn render(settings: &Settings, scene: &Scene) {
 
                 let reflected_light = (1.0 / PI) * cos_angle * (light.intensity / ray_to_light.len().powi(2));
 
-                let val = reflected_light.min(255.0);
+                let val = reflected_light.min(255.0).max(0.0);
 
-                let pixel_color = ((32.0 * settings.ambient_coefficient()) + (settings.diffuse_coefficient() * val)) as u8;
+                // let pixel_color = ((32.0 * settings.ambient_coefficient()) + (settings.diffuse_coefficient() * val)) as u8;
 
-                ppm::Color::new(pixel_color, pixel_color, pixel_color)
+                set_color(val, &obj, &settings)
+                // ppm::Color::new(pixel_color, pixel_color, pixel_color)
             } else {
                 ppm::Color::new(0, 0, 0)
             };
@@ -81,6 +82,18 @@ pub fn render(settings: &Settings, scene: &Scene) {
             ppm::write_color(&color).expect("something wrong when writing color");
         }
     }
+}
+
+// value: [0, 255]
+fn set_color(value: f32, sphere: &Sphere3D, settings: &Settings) -> ppm::Color {
+    let a = settings.ambient_coefficient();
+    let d = settings.diffuse_coefficient();
+    let intensity = (((32.0 * a) + (d * value))) / 255.0;
+    ppm::Color::new(
+        (intensity * sphere.color.r as f32) as u8,
+        (intensity * sphere.color.g as f32) as u8,
+        (intensity * sphere.color.b as f32) as u8
+    )
 }
 
 fn nearest_intersection<'a>(ray: &Ray, scene: &'a Scene) -> Option<(&'a Sphere3D, f32)> {

@@ -1,9 +1,10 @@
 use std::io::{self, Write};
 
+#[derive(Debug)]
 pub struct Color {
-    r: u8,
-    g: u8,
-    b: u8
+    pub r: u8,
+    pub g: u8,
+    pub b: u8
 }
 
 impl Color {
