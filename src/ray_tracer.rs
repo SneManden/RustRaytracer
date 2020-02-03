@@ -58,23 +58,27 @@ pub fn render(settings: &Settings, scene: &Scene) {
             let intersection = nearest_intersection(&ray, &scene);
 
             let color = if let Some((obj, dist)) = intersection {
-                let intersection_point = ray.point_at(dist);  //ray.origin().plus(&ray_dir.scale(dist));
+                let intersection_point = ray.point_at(dist);
                 let surface_normal = obj.get_normal(&intersection_point);
 
                 let light = &scene.light;
-                let ray_to_light = Vec3D::between(&intersection_point, &light.center).unit();
+                let vec_to_light = Vec3D::between(&intersection_point, &light.center);
+                let distance_to_light = vec_to_light.len(); 
+                let ray_to_light = Ray::new(intersection_point, &light.center);
 
-                // L = 1/pi cos(angle) I / r^2
-                let cos_angle = surface_normal.dot(&ray_to_light).max(0.0);
+                if !is_occluded(&ray_to_light, distance_to_light, &scene) {
+                    // L = 1/pi cos(angle) I / r^2
+                    let cos_angle = surface_normal.dot(&ray_to_light.direction()).max(0.0);
 
-                let reflected_light = (1.0 / PI) * cos_angle * (light.intensity / ray_to_light.len().powi(2));
+                    let reflected_light = (1.0 / PI) * cos_angle * (light.intensity / vec_to_light.len().powi(2));
 
-                let val = reflected_light.min(255.0).max(0.0);
+                    let val = reflected_light.min(255.0).max(0.0);
 
-                // let pixel_color = ((32.0 * settings.ambient_coefficient()) + (settings.diffuse_coefficient() * val)) as u8;
+                    set_color(val, &obj, &settings)
+                } else {
+                    ppm::Color::new(0, 0, 0)
+                }
 
-                set_color(val, &obj, &settings)
-                // ppm::Color::new(pixel_color, pixel_color, pixel_color)
             } else {
                 ppm::Color::new(0, 0, 0)
             };
@@ -94,6 +98,22 @@ fn set_color(value: f32, sphere: &Sphere3D, settings: &Settings) -> ppm::Color {
         (intensity * sphere.color.g as f32) as u8,
         (intensity * sphere.color.b as f32) as u8
     )
+}
+
+fn is_occluded(ray: &Ray, distance_to_light: f32, scene: &Scene) -> bool {
+    for object in &scene.objects {
+        let intersection = object.intersect(&ray);
+        match intersection {
+            Some(p) => {
+                let dist = Vec3D::between(&ray.origin(), &p).len();
+                if dist < distance_to_light {
+                    return true;
+                }
+            },
+            None => continue
+        }
+    }
+    false
 }
 
 fn nearest_intersection<'a>(ray: &Ray, scene: &'a Scene) -> Option<(&'a Sphere3D, f32)> {
